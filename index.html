@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#f4f1e8">
+  <meta name="description" content="Instant Google SERP preview for Telegram.">
+  <title>Searchframe — SERP Preview</title>
+  <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --tg-theme-bg-color: #f4f1e8;
+      --tg-theme-text-color: #1f2523;
+      --tg-theme-hint-color: #747b77;
+      --tg-theme-link-color: #1769aa;
+      --tg-theme-button-color: #1e6f5c;
+      --tg-theme-button-text-color: #ffffff;
+      --tg-theme-secondary-bg-color: #e9e5da;
+      --paper: var(--tg-theme-bg-color);
+      --ink: var(--tg-theme-text-color);
+      --muted: var(--tg-theme-hint-color);
+      --accent: var(--tg-theme-button-color);
+      --accent-ink: var(--tg-theme-button-text-color);
+      --panel: var(--tg-theme-secondary-bg-color);
+      --line: color-mix(in srgb, var(--ink) 13%, transparent);
+      --soft-line: color-mix(in srgb, var(--ink) 8%, transparent);
+      --card: color-mix(in srgb, var(--paper) 88%, white 12%);
+      --field: color-mix(in srgb, var(--paper) 94%, var(--ink) 6%);
+      --success: #287d55;
+      --warning: #ad6b1f;
+      --danger: #b3483e;
+      --shadow: 0 18px 55px color-mix(in srgb, var(--ink) 10%, transparent);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 15px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--paper);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 12% 3%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 27rem),
+        linear-gradient(165deg, var(--paper) 0%, color-mix(in srgb, var(--paper) 91%, var(--panel) 9%) 100%);
+      color: var(--ink);
+      font-family: "Avenir Next", "Gill Sans", "Trebuchet MS", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .app-shell[hidden],
+    .telegram-guard[hidden] {
+      display: none !important;
+    }
+
+    .telegram-guard {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(60, 141, 116, .2), transparent 22rem),
+        #17201e;
+      color: #f5f1e7;
+      text-align: center;
+    }
+
+    .guard-card {
+      width: min(100%, 430px);
+      padding: 34px 26px 28px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 30px;
+      background: rgba(255, 255, 255, .055);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, .28);
+      backdrop-filter: blur(20px);
+    }
+
+    .guard-mark {
+      display: grid;
+      place-items: center;
+      width: 68px;
+      height: 68px;
+      margin: 0 auto 24px;
+      border-radius: 22px;
+      background: #f5f1e7;
+      color: #1e6f5c;
+      transform: rotate(-4deg);
+      box-shadow: 10px 10px 0 rgba(61, 139, 116, .35);
+    }
+
+    .guard-card h1 {
+      max-width: 330px;
+      margin: 0 auto 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 8vw, 3rem);
+      font-weight: 500;
+      line-height: .98;
+      letter-spacing: -.045em;
+    }
+
+    .guard-card p {
+      margin: 0 auto;
+      color: rgba(245, 241, 231, .68);
+      font-size: .98rem;
+      line-height: 1.65;
+    }
+
+    .guard-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 24px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .06);
+      color: rgba(245, 241, 231, .82);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .guard-pill::before {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6fcca8;
+      content: "";
+      box-shadow: 0 0 0 5px rgba(111, 204, 168, .11);
+    }
+
+    .app-shell {
+      position: relative;
+      width: min(100%, 1120px);
+      margin: 0 auto;
+      padding: calc(18px + env(safe-area-inset-top)) 18px calc(32px + env(safe-area-inset-bottom));
+      opacity: 0;
+      animation: app-in .55s cubic-bezier(.2, .75, .25, 1) forwards;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      position: relative;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 42px;
+      height: 42px;
+      overflow: hidden;
+      border-radius: 14px;
+      background: var(--ink);
+      color: var(--paper);
+      box-shadow: 5px 5px 0 color-mix(in srgb, var(--accent) 30%, transparent);
+    }
+
+    .brand-copy strong,
+    .brand-copy span {
+      display: block;
+    }
+
+    .brand-copy strong {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .brand-copy span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .075em;
+      text-transform: uppercase;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--card) 82%, transparent);
+      box-shadow: 0 5px 18px color-mix(in srgb, var(--ink) 5%, transparent);
+      cursor: pointer;
+      transition: transform .18s ease, background .18s ease;
+    }
+
+    .icon-button:active {
+      transform: scale(.94);
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, .72fr);
+      gap: clamp(28px, 7vw, 92px);
+      align-items: end;
+      padding: clamp(22px, 5vw, 52px) 0 clamp(38px, 6vw, 72px);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 18px;
+      color: var(--accent);
+      font-size: .74rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      width: 28px;
+      height: 1px;
+      background: currentColor;
+      content: "";
+    }
+
+    .hero h1 {
+      max-width: 730px;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(3rem, 10vw, 6.7rem);
+      font-weight: 400;
+      line-height: .9;
+      letter-spacing: -.068em;
+    }
+
+    .hero h1 em {
+      color: var(--accent);
+      font-weight: 400;
+      text-decoration: none;
+    }
+
+    .hero-note {
+      position: relative;
+      margin: 0 0 5px;
+      padding: 24px 24px 24px 30px;
+      border-left: 2px solid var(--accent);
+      color: var(--muted);
+      font-size: clamp(.98rem, 2.5vw, 1.12rem);
+      line-height: 1.65;
+    }
+
+    .hero-note strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink);
+      font-size: 1.04rem;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+      align-items: start;
+      gap: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: color-mix(in srgb, var(--card) 91%, transparent);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+
+    .editor-panel {
+      padding: clamp(20px, 4vw, 32px);
+    }
+
+    .panel-kicker {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-size: .7rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .panel-title {
+      margin: 0 0 26px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.75rem, 5vw, 2.5rem);
+      font-weight: 500;
+      line-height: 1;
+      letter-spacing: -.045em;
+    }
+
+    .field-group {
+      margin-bottom: 19px;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+    }
+
+    label {
+      color: var(--ink);
+      font-size: .84rem;
+      font-weight: 750;
+    }
+
+    .counter {
+      color: var(--muted);
+      font-size: .73rem;
+      font-variant-numeric: tabular-nums;
+      transition: color .2s ease;
+    }
+
+    .counter.is-warning {
+      color: var(--warning);
+    }
+
+    .counter.is-danger {
+      color: var(--danger);
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--soft-line);
+      border-radius: var(--radius-md);
+      outline: none;
+      background: var(--field);
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.45;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    input {
+      height: 52px;
+      padding: 0 15px;
+    }
+
+    textarea {
+      min-height: 126px;
+      padding: 14px 15px;
+      resize: vertical;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: color-mix(in srgb, var(--muted) 72%, transparent);
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+      background: var(--card);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+
+    .form-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 27px;
+    }
+
+    .primary-button,
+    .secondary-button {
+      min-height: 52px;
+      border-radius: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .18s ease, filter .18s ease;
+    }
+
+    .primary-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 20px;
+      border: 0;
+      background: var(--accent);
+      color: var(--accent-ink);
+      box-shadow: 0 11px 24px color-mix(in srgb, var(--accent) 22%, transparent);
+    }
+
+    .secondary-button {
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .primary-button:active,
+    .secondary-button:active {
+      transform: scale(.97);
+    }
+
+    .preview-panel {
+      position: sticky;
+      top: calc(12px + env(safe-area-inset-top));
+      overflow: hidden;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--soft-line);
+    }
+
+    .preview-toolbar strong {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.03rem;
+      font-weight: 600;
+    }
+
+    .device-switcher {
+      display: flex;
+      padding: 3px;
+      border: 1px solid var(--soft-line);
+      border-radius: 11px;
+      background: var(--field);
+    }
+
+    .device-button {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 30px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .device-button.is-active {
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--ink) 10%, transparent);
+    }
+
+    .browser-stage {
+      min-height: 438px;
+      padding: clamp(18px, 4vw, 32px);
+      background:
+        linear-gradient(var(--soft-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--soft-line) 1px, transparent 1px),
+        color-mix(in srgb, var(--panel) 62%, var(--paper) 38%);
+      background-size: 24px 24px;
+    }
+
+    .browser-frame {
+      width: 100%;
+      max-width: 660px;
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 22px 40px rgba(35, 42, 40, .12);
+      transition: max-width .28s cubic-bezier(.2, .75, .25, 1);
+    }
+
+    .browser-frame.is-mobile {
+      max-width: 390px;
+    }
+
+    .browser-chrome {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      height: 44px;
+      padding: 0 14px;
+      border-bottom: 1px solid #e7e8eb;
+      background: #f7f8f9;
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .browser-dots i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #c9cdd2;
+    }
+
+    .address-bar {
+      flex: 1;
+      height: 24px;
+      overflow: hidden;
+      border-radius: 7px;
+      background: #eceff1;
+      color: #8a9097;
+      font: 10px/24px "Avenir Next", sans-serif;
+      text-align: center;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .google-page {
+      min-height: 320px;
+      padding: 27px clamp(18px, 5vw, 34px) 38px;
+      color: #202124;
+      font-family: Arial, sans-serif;
+    }
+
+    .search-strip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 29px;
+    }
+
+    .google-g {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -3px;
+    }
+
+    .search-box {
+      flex: 1;
+      height: 34px;
+      border: 1px solid #dfe1e5;
+      border-radius: 999px;
+      box-shadow: 0 1px 3px rgba(32, 33, 36, .1);
+    }
+
+    .result-card {
+      max-width: 600px;
+    }
+
+    .result-site-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .result-favicon {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid #dadce0;
+      border-radius: 50%;
+      background: #f8f9fa;
+      color: #3c4043;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .result-site {
+      min-width: 0;
+    }
+
+    .result-site-name,
+    .result-url {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-site-name {
+      margin-bottom: 2px;
+      color: #202124;
+      font-size: 13px;
+    }
+
+    .result-url {
+      color: #4d5156;
+      font-size: 11px;
+    }
+
+    .result-title {
+      display: -webkit-box;
+      margin: 0 0 6px;
+      overflow: hidden;
+      color: #1a0dab;
+      font-size: clamp(18px, 4.5vw, 21px);
+      font-weight: 400;
+      line-height: 1.3;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .result-description {
+      display: -webkit-box;
+      margin: 0;
+      overflow: hidden;
+      color: #4d5156;
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .preview-tip {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 20px 4px 0;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.5;
+    }
+
+    .preview-tip svg {
+      flex: 0 0 auto;
+      margin-top: 1px;
+      color: var(--accent);
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 20;
+      right: 18px;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      left: 18px;
+      width: fit-content;
+      max-width: calc(100% - 36px);
+      margin: auto;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 14px;
+      background: #202927;
+      color: #f6f2e8;
+      box-shadow: 0 16px 38px rgba(0, 0, 0, .24);
+      font-size: .84rem;
+      font-weight: 700;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(14px) scale(.96);
+      transition: opacity .22s ease, transform .22s ease;
+    }
+
+    .toast.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @keyframes app-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 760px) {
+      .app-shell {
+        padding-right: 14px;
+        padding-left: 14px;
+      }
+
+      .hero {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        padding-top: 22px;
+      }
+
+      .hero h1 {
+        max-width: 570px;
+      }
+
+      .hero-note {
+        max-width: 500px;
+        padding-top: 11px;
+        padding-bottom: 11px;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-panel {
+        position: static;
+      }
+
+      .browser-stage {
+        min-height: 385px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .brand-copy span {
+        display: none;
+      }
+
+      .hero h1 {
+        font-size: clamp(3.15rem, 16vw, 4.45rem);
+      }
+
+      .form-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .secondary-button {
+        min-height: 46px;
+      }
+
+      .preview-toolbar,
+      .editor-panel {
+        padding-right: 18px;
+        padding-left: 18px;
+      }
+
+      .browser-stage {
+        padding: 14px;
+      }
+
+      .google-page {
+        padding-right: 17px;
+        padding-left: 17px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="telegram-guard" id="telegramGuard" aria-labelledby="guardTitle">
+    <div class="guard-card">
+      <div class="guard-mark" aria-hidden="true">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+          <path d="M5 11.2 18.1 5.6c.9-.4 1.7.2 1.4 1.4l-2.2 10.5c-.2.9-1 1.1-1.8.7l-3.4-2.5-1.7 1.6c-.2.2-.3.3-.7.3l.3-3.5 6.4-5.8c.3-.3-.1-.4-.4-.2l-7.9 5-3.4-1.1c-.9-.3-.9-.7.3-1.2Z" fill="currentColor"/>
+        </svg>
+      </div>
+      <h1 id="guardTitle">Open inside Telegram</h1>
+      <p>This mini app is available only from its Telegram bot. Return to the chat and tap the app button to continue.</p>
+      <div class="guard-pill">Telegram access required</div>
+    </div>
+  </section>
+
+  <main class="app-shell" id="app" hidden>
+    <header class="topbar">
+      <div class="brand" aria-label="Searchframe">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle cx="10.5" cy="10.5" r="5.75" stroke="currentColor" stroke-width="2"/>
+            <path d="m15 15 4.2 4.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <strong>Searchframe</strong>
+          <span>SERP preview studio</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="closeButton" type="button" aria-label="Close app" title="Close app">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m7 7 10 10M17 7 7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="hero" aria-labelledby="pageTitle">
+      <div>
+        <div class="eyebrow">Instant Google preview</div>
+        <h1 id="pageTitle">Shape the <em>click</em> before it happens.</h1>
+      </div>
+      <p class="hero-note"><strong>Write once. Preview live.</strong>See how your title, URL, and description may appear in search before you publish.</p>
+    </section>
+
+    <section class="workspace" aria-label="SERP preview workspace">
+      <form class="panel editor-panel" id="serpForm" novalidate>
+        <p class="panel-kicker">Your snippet</p>
+        <h2 class="panel-title">Build the result</h2>
+
+        <div class="field-group">
+          <div class="label-row">
+            <label for="pageTitleInput">SEO title</label>
+            <span class="counter" id="titleCounter">0 / 60</span>
+          </div>
+          <input id="pageTitleInput" name="title" type="text" maxlength="120" autocomplete="off" placeholder="A clear, useful page title">
+        </div>
+
+        <div class="field-group">
+          <div class="label-row">
+            <label for="pageUrlInput">Page URL</label>
+            <span class="counter" id="urlCounter">0 / 75</span>
+          </div>
+          <input id="pageUrlInput" name="url" type="url" maxlength="180" inputmode="url" autocapitalize="none" autocomplete="url" spellcheck="false" placeholder="example.com/guides/serp-preview">
+        </div>
+
+        <div class="field-group">
+          <div class="label-row">
+            <label for="descriptionInput">Meta description</label>
+            <span class="counter" id="descriptionCounter">0 / 160</span>
+          </div>
+          <textarea id="descriptionInput" name="description" maxlength="320" placeholder="Explain what the page offers and give searchers a reason to visit."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button class="primary-button" id="shareButton" type="submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m21 3-7.7 18-4.2-7.2L2 9.8 21 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="m9.1 13.8 4.5-4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            Send to chat
+          </button>
+          <button class="secondary-button" id="clearButton" type="button">Clear</button>
+        </div>
+      </form>
+
+      <section class="panel preview-panel" aria-labelledby="previewTitle">
+        <div class="preview-toolbar">
+          <strong id="previewTitle">Live search preview</strong>
+          <div class="device-switcher" aria-label="Preview size">
+            <button class="device-button" id="desktopPreview" type="button" aria-label="Desktop preview" aria-pressed="false">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <button class="device-button is-active" id="mobilePreview" type="button" aria-label="Mobile preview" aria-pressed="true">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="6.5" y="2.5" width="11" height="19" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M10 18.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="browser-stage">
+          <div class="browser-frame is-mobile" id="browserFrame">
+            <div class="browser-chrome" aria-hidden="true">
+              <div class="browser-dots"><i></i><i></i><i></i></div>
+              <div class="address-bar" id="addressBar">google.com/search</div>
+            </div>
+            <div class="google-page">
+              <div class="search-strip" aria-hidden="true">
+                <div class="google-g">G</div>
+                <div class="search-box"></div>
+              </div>
+              <article class="result-card" aria-live="polite">
+                <div class="result-site-row">
+                  <div class="result-favicon" id="resultFavicon">S</div>
+                  <div class="result-site">
+                    <span class="result-site-name" id="resultSiteName">Your website</span>
+                    <span class="result-url" id="resultUrl">https://example.com/page</span>
+                  </div>
+                </div>
+                <h3 class="result-title" id="resultTitle">Your compelling page title appears here</h3>
+                <p class="result-description" id="resultDescription">Add a concise meta description to show searchers what they will find on your page.</p>
+              </article>
+            </div>
+          </div>
+          <p class="preview-tip">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M12 11v5M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Google may rewrite snippets based on the query. Use this as a visual guide, not a pixel-perfect guarantee.
+          </p>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const guard = document.getElementById('telegramGuard');
+      const app = document.getElementById('app');
+      const toast = document.getElementById('toast');
+      const tg = window.Telegram && window.Telegram.WebApp;
+      const isTelegram = Boolean(tg && typeof tg.initData === 'string' && tg.initData.trim().length > 0);
+
+      if (!isTelegram) {
+        guard.hidden = false;
+        app.hidden = true;
+        return;
+      }
+
+      guard.hidden = true;
+      app.hidden = false;
+
+      const fields = {
+        title: document.getElementById('pageTitleInput'),
+        url: document.getElementById('pageUrlInput'),
+        description: document.getElementById('descriptionInput')
+      };
+
+      const preview = {
+        title: document.getElementById('resultTitle'),
+        url: document.getElementById('resultUrl'),
+        description: document.getElementById('resultDescription'),
+        siteName: document.getElementById('resultSiteName'),
+        favicon: document.getElementById('resultFavicon'),
+        addressBar: document.getElementById('addressBar')
+      };
+
+      const counters = {
+        title: document.getElementById('titleCounter'),
+        url: document.getElementById('urlCounter'),
+        description: document.getElementById('descriptionCounter')
+      };
+
+      const limits = { title: 60, url: 75, description: 160 };
+      let toastTimer;
+
+      function showToast(message) {
+        window.clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 2200);
+      }
+
+      function triggerHaptic(style = 'light') {
+        try {
+          tg.HapticFeedback.impactOccurred(style);
+        } catch (_) {
+        }
+      }
+
+      function parseUrl(rawUrl) {
+        const trimmed = rawUrl.trim();
+        if (!trimmed) {
+          return null;
+        }
+
+        try {
+          return new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+        } catch (_) {
+          return null;
+        }
+      }
+
+      function prettifyPath(url) {
+        const path = decodeURIComponent(url.pathname)
+          .split('/')
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(' › ');
+        return path ? `${url.hostname} › ${path}` : url.hostname;
+      }
+
+      function updateCounter(name) {
+        const length = fields[name].value.length;
+        const limit = limits[name];
+        const counter = counters[name];
+        counter.textContent = `${length} / ${limit}`;
+        counter.classList.toggle('is-warning', length > limit * .85 && length <= limit);
+        counter.classList.toggle('is-danger', length > limit);
+      }
+
+      function updatePreview() {
+        const title = fields.title.value.trim();
+        const description = fields.description.value.trim();
+        const url = parseUrl(fields.url.value);
+
+        preview.title.textContent = title || 'Your compelling page title appears here';
+        preview.description.textContent = description || 'Add a concise meta description to show searchers what they will find on your page.';
+
+        if (url) {
+          const hostname = url.hostname.replace(/^www\./i, '');
+          preview.siteName.textContent = hostname;
+          preview.url.textContent = prettifyPath(url);
+          preview.favicon.textContent = hostname.charAt(0).toUpperCase() || 'S';
+          preview.addressBar.textContent = hostname;
+        } else {
+          preview.siteName.textContent = fields.url.value.trim() ? 'Check this URL' : 'Your website';
+          preview.url.textContent = fields.url.value.trim() || 'https://example.com/page';
+          preview.favicon.textContent = 'S';
+          preview.addressBar.textContent = 'google.com/search';
+        }
+
+        Object.keys(fields).forEach(updateCounter);
+      }
+
+      function applyTheme() {
+        const root = document.documentElement;
+        const theme = tg.themeParams || {};
+        const fallback = tg.colorScheme === 'dark' ? '#18211f' : '#f4f1e8';
+
+        root.style.colorScheme = tg.colorScheme === 'dark' ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', theme.bg_color || fallback);
+
+        try {
+          tg.setHeaderColor(theme.bg_color || fallback);
+          tg.setBackgroundColor(theme.bg_color || fallback);
+          tg.setBottomBarColor(theme.bg_color || fallback);
+        } catch (_) {
+        }
+      }
+
+      function closeApp() {
+        triggerHaptic('light');
+        tg.close();
+      }
+
+      function setDevice(mode) {
+        const isMobile = mode === 'mobile';
+        document.getElementById('browserFrame').classList.toggle('is-mobile', isMobile);
+        document.getElementById('mobilePreview').classList.toggle('is-active', isMobile);
+        document.getElementById('desktopPreview').classList.toggle('is-active', !isMobile);
+        document.getElementById('mobilePreview').setAttribute('aria-pressed', String(isMobile));
+        document.getElementById('desktopPreview').setAttribute('aria-pressed', String(!isMobile));
+        triggerHaptic('light');
+      }
+
+      Object.values(fields).forEach(field => field.addEventListener('input', updatePreview));
+
+      document.getElementById('clearButton').addEventListener('click', () => {
+        Object.values(fields).forEach(field => { field.value = ''; });
+        updatePreview();
+        fields.title.focus();
+        triggerHaptic('medium');
+        showToast('Preview cleared');
+      });
+
+      document.getElementById('closeButton').addEventListener('click', closeApp);
+      document.getElementById('mobilePreview').addEventListener('click', () => setDevice('mobile'));
+      document.getElementById('desktopPreview').addEventListener('click', () => setDevice('desktop'));
+
+      document.getElementById('serpForm').addEventListener('submit', event => {
+        event.preventDefault();
+
+        const data = {
+          type: 'serp_preview',
+          title: fields.title.value.trim(),
+          url: fields.url.value.trim(),
+          description: fields.description.value.trim()
+        };
+
+        if (!data.title && !data.url && !data.description) {
+          triggerHaptic('heavy');
+          showToast('Add some preview content first');
+          fields.title.focus();
+          return;
+        }
+
+        const payload = JSON.stringify(data);
+        if (new Blob([payload]).size > 4096) {
+          triggerHaptic('heavy');
+          showToast('Preview is too long to send');
+          return;
+        }
+
+        try {
+          tg.sendData(payload);
+          tg.HapticFeedback.notificationOccurred('success');
+          showToast('Preview sent to the bot');
+        } catch (_) {
+          tg.HapticFeedback.notificationOccurred('error');
+          showToast('This launch method cannot send to chat');
+        }
+      });
+
+      tg.ready();
+      tg.expand();
+      applyTheme();
+      updatePreview();
+
+      try {
+        tg.disableVerticalSwipes();
+      } catch (_) {
+      }
+
+      tg.BackButton.show();
+      tg.BackButton.onClick(closeApp);
+      tg.onEvent('themeChanged', applyTheme);
+    })();
+  </script>
+</body>
+</html>
